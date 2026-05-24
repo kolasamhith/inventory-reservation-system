@@ -105,12 +105,24 @@ export default function HomePage() {
 
   if (loading) {
 
-    return (
-      <div className="p-10">
-        Loading...
+  return (
+    <main className="min-h-screen bg-gray-100 flex items-center justify-center">
+
+      <div className="bg-white p-8 rounded-2xl shadow-md">
+
+        <h2 className="text-2xl font-semibold mb-2">
+          Loading Products
+        </h2>
+
+        <p className="text-gray-500">
+          Fetching latest inventory...
+        </p>
+
       </div>
-    );
-  }
+
+    </main>
+  );
+}
 
   return (
     <main className="min-h-screen p-10">

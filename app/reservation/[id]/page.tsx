@@ -22,8 +22,14 @@ export default function ReservationPage() {
   const [error, setError] =
     useState("");
 
+  const [success, setSuccess] =
+    useState("");
+
   const [loading, setLoading] =
     useState(true);
+
+  const [redirecting, setRedirecting] =
+    useState(false);
 
   async function fetchReservation() {
 
@@ -117,6 +123,9 @@ export default function ReservationPage() {
 
     try {
 
+      setError("");
+      setSuccess("");
+
       const response =
         await fetch(
           `/api/reservations/${id}/confirm`,
@@ -140,6 +149,20 @@ export default function ReservationPage() {
 
       setReservation(data);
 
+      setSuccess(
+        "Purchase confirmed successfully!"
+      );
+
+      setRedirecting(true);
+
+      setTimeout(() => {
+
+        router.refresh();
+
+        router.push("/");
+
+      }, 1500);
+
     } catch {
 
       setError(
@@ -151,6 +174,9 @@ export default function ReservationPage() {
   async function cancelReservation() {
 
     try {
+
+      setError("");
+      setSuccess("");
 
       const response =
         await fetch(
@@ -173,7 +199,19 @@ export default function ReservationPage() {
         return;
       }
 
-      router.push("/");
+      setSuccess(
+        "Reservation cancelled successfully!"
+      );
+
+      setRedirecting(true);
+
+      setTimeout(() => {
+
+        router.refresh();
+
+        router.push("/");
+
+      }, 1500);
 
     } catch {
 
@@ -183,58 +221,143 @@ export default function ReservationPage() {
     }
   }
 
+  if (redirecting) {
+
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+
+        <div className="bg-white p-10 rounded-2xl shadow-xl text-center animate-pulse">
+
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            Redirecting...
+          </h2>
+
+          <p className="text-gray-500">
+            Updating inventory state
+          </p>
+
+        </div>
+
+      </main>
+    );
+  }
+
   if (loading) {
-    return <div className="p-10">
-      Loading...
-    </div>;
+
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+
+        <div className="bg-white p-10 rounded-2xl shadow-xl text-center animate-pulse">
+
+          <h2 className="text-3xl font-bold text-gray-900 mb-3">
+            Loading Reservation
+          </h2>
+
+          <p className="text-gray-500">
+            Fetching latest reservation details
+          </p>
+
+        </div>
+
+      </main>
+    );
   }
 
   if (!reservation) {
-    return <div className="p-10">
-      Reservation not found
-    </div>;
+
+    return (
+      <main className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
+
+        <div className="bg-white p-10 rounded-2xl shadow-xl text-center">
+
+          <h2 className="text-3xl font-bold text-red-600 mb-3">
+            Reservation Not Found
+          </h2>
+
+        </div>
+
+      </main>
+    );
   }
 
   return (
-    <main className="min-h-screen p-10">
+    <main className="min-h-screen bg-gradient-to-br from-gray-100 to-gray-200 p-10">
 
-      <h1 className="text-3xl font-bold mb-6">
+      <h1 className="text-5xl font-bold text-gray-900 mb-8">
         Reservation Checkout
       </h1>
 
       {error && (
-        <div className="bg-red-100 text-red-700 p-4 rounded mb-6">
+        <div className="bg-red-100 border border-red-300 text-red-700 p-4 rounded-xl mb-6 max-w-2xl">
           {error}
         </div>
       )}
 
-      <div className="border rounded-xl p-6 max-w-xl">
+      {success && (
+        <div className="bg-green-100 border border-green-300 text-green-700 p-4 rounded-xl mb-6 max-w-2xl">
+          {success}
+        </div>
+      )}
 
-        <p>
-          Reservation ID:
-          {" "}
-          {reservation.id}
-        </p>
+      <div className="bg-white border border-gray-200 rounded-2xl p-8 shadow-md max-w-2xl">
 
-        <p>
-          Quantity:
-          {" "}
-          {reservation.quantity}
-        </p>
+        <div className="space-y-5">
 
-        <p>
-          Status:
-          {" "}
-          {reservation.status}
-        </p>
+          <div>
 
-        <p className="text-lg font-semibold mt-4">
-          Time Remaining:
-          {" "}
-          {timeLeft}
-        </p>
+            <p className="text-sm text-gray-500">
+              Reservation ID
+            </p>
 
-        <div className="flex gap-4 mt-6">
+            <p className="text-gray-900 font-medium break-all">
+              {reservation.id}
+            </p>
+
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+
+            <div className="bg-gray-50 rounded-xl p-4">
+
+              <p className="text-sm text-gray-500">
+                Quantity
+              </p>
+
+              <p className="text-2xl font-bold text-gray-900">
+                {reservation.quantity}
+              </p>
+
+            </div>
+
+            <div className="bg-gray-50 rounded-xl p-4">
+
+              <p className="text-sm text-gray-500">
+                Status
+              </p>
+
+              <p className="text-2xl font-bold text-blue-600">
+                {reservation.status}
+              </p>
+
+            </div>
+
+          </div>
+
+          <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
+
+            <p className="text-sm text-blue-700 mb-1">
+              Reservation Expires In
+            </p>
+
+            <p className="text-4xl font-bold text-blue-600">
+              {timeLeft}
+            </p>
+
+          </div>
+
+        </div>
+
+        <div className="flex gap-4 mt-8">
 
           <button
             onClick={confirmPurchase}
@@ -244,7 +367,7 @@ export default function ReservationPage() {
               "PENDING"
             }
 
-            className="bg-green-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
+            className="flex-1 bg-green-600 hover:bg-green-700 transition text-white px-6 py-3 rounded-xl font-semibold disabled:bg-gray-400"
           >
             Confirm Purchase
           </button>
@@ -257,9 +380,9 @@ export default function ReservationPage() {
               "PENDING"
             }
 
-            className="bg-red-600 text-white px-4 py-2 rounded disabled:bg-gray-400"
+            className="flex-1 bg-red-600 hover:bg-red-700 transition text-white px-6 py-3 rounded-xl font-semibold disabled:bg-gray-400"
           >
-            Cancel
+            Cancel Reservation
           </button>
 
         </div>
