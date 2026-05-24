@@ -1,8 +1,8 @@
-# Allo Inventory Reservation System
+# Inventory Reservation System
 
 A full-stack inventory reservation system built with Next.js, Prisma, Neon PostgreSQL, and TailwindCSS.
 
-This project simulates a real-world multi-warehouse inventory reservation flow where stock is temporarily reserved during checkout to prevent overselling while avoiding premature stock depletion from abandoned carts.
+This project simulates a real-world multi-warehouse inventory reservation flow where stock is temporarily reserved during checkout to prevent overselling while avoiding premature stock depletion caused by abandoned carts.
 
 ---
 
@@ -37,7 +37,7 @@ https://github.com/your-username/allo-inventory
 ## Backend
 - Next.js API Routes
 - Prisma ORM
-- PostgreSQL (Neon)
+- PostgreSQL Transactions
 
 ## Database
 - Neon Hosted PostgreSQL
@@ -52,7 +52,7 @@ https://github.com/your-username/allo-inventory
 - Reservation lifecycle management
 - Reservation expiry handling
 - Concurrency-safe reservation logic
-- Automatic inventory updates
+- Automatic inventory synchronization
 
 ## Frontend
 - Product listing page
@@ -74,7 +74,6 @@ https://github.com/your-username/allo-inventory
 - Transaction-based reservation handling
 - Row-level locking for concurrency safety
 - Lazy cleanup for expired reservations
-- Idempotency support for reservation creation
 
 ---
 
@@ -165,21 +164,35 @@ Includes:
 
 ---
 
-# Concurrency Handling
+# Engineering Decisions
 
-The reservation endpoint is implemented using PostgreSQL row-level locking with:
+## Why PostgreSQL Row Locking?
+
+The reservation system uses PostgreSQL row-level locking with:
 
 ```sql
 SELECT ... FOR UPDATE
 ```
 
-inside a database transaction.
+inside database transactions.
 
-This guarantees that when multiple requests attempt to reserve the final unit simultaneously:
-- exactly one request succeeds
-- remaining requests receive `409 Conflict`
+This guarantees that concurrent reservation requests cannot oversell inventory.
 
-This prevents overselling and ensures inventory consistency under concurrency.
+Only one transaction can modify the inventory row at a time, ensuring consistency even under high concurrency.
+
+---
+
+# Concurrency Handling
+
+When multiple users attempt to reserve the same inventory simultaneously:
+
+1. The inventory row is locked using PostgreSQL row-level locking.
+2. The first transaction updates reserved stock.
+3. Other transactions wait for the lock.
+4. Once released, remaining transactions re-check stock availability.
+5. If insufficient stock remains, a `409 Conflict` response is returned.
+
+This guarantees inventory correctness under concurrent requests.
 
 ---
 
@@ -198,28 +211,6 @@ If expired:
 - reservation status is updated to `RELEASED`
 
 This approach avoids requiring additional infrastructure like cron jobs or background workers while still ensuring inventory consistency.
-
----
-
-# Idempotency Support
-
-The reservation endpoint supports idempotency using the `Idempotency-Key` header.
-
-If a client retries the same request with the same key:
-- the original response is returned
-- duplicate reservations are not created
-
-This prevents accidental duplicate side effects caused by:
-- retries
-- double clicks
-- network failures
-
-Example:
-
-```http
-POST /api/reservations
-Idempotency-Key: abc123
-```
 
 ---
 
@@ -283,6 +274,11 @@ npx prisma generate
 npx prisma db seed
 ```
 
+This creates:
+- sample products
+- warehouses
+- inventory records
+
 ---
 
 ## 8. Run Development Server
@@ -291,16 +287,11 @@ npx prisma db seed
 npm run dev
 ```
 
----
+Application runs at:
 
-# Seed Data
-
-The seed script creates:
-- sample products
-- warehouses
-- inventory records
-
-This allows the application to be demoed immediately after setup.
+```bash
+http://localhost:3000
+```
 
 ---
 
@@ -323,10 +314,14 @@ This allows the application to be demoed immediately after setup.
 ## 409 Conflict
 Returned when insufficient stock is available.
 
+Displayed directly in frontend UI.
+
+---
+
 ## 410 Gone
 Returned when reservation expires before confirmation.
 
-Both errors are displayed clearly in the frontend UI.
+Displayed directly in frontend UI.
 
 ---
 
@@ -345,7 +340,7 @@ Both errors are displayed clearly in the frontend UI.
 ## Current Trade-offs
 - Lazy cleanup strategy instead of background workers
 - Polling-based inventory refresh instead of WebSockets
-- Idempotency implemented only for reservation creation endpoint
+- Idempotency was not implemented due to time constraints
 
 ## Improvements With More Time
 - Redis-based distributed locking
@@ -370,10 +365,15 @@ Tested:
 - reservation expiry
 - insufficient stock handling
 
+---
+
 ## Concurrency Testing
+
 Concurrent requests against low-stock inventory correctly result in:
 - one successful reservation
 - remaining requests receiving `409 Conflict`
+
+This verifies concurrency-safe reservation handling.
 
 ---
 
