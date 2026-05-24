@@ -2,25 +2,80 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: Request,
-  {
-  params,
-}: {
-  params: {
-    id: string;
-  };
-}
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
 
   try {
 
-    const { id } = params;
+    const { id } =
+      await context.params;
 
-    const reservation =
-      await prisma.reservation.findUnique({
-        where: { id },
-      });
+    const result =
+      await prisma.$transaction(
+        async (tx) => {
 
-    if (!reservation) {
+          const reservation =
+            await tx.reservation.findUnique({
+              where: { id },
+            });
+
+          if (!reservation) {
+            throw new Error(
+              "NOT_FOUND"
+            );
+          }
+
+          if (
+            reservation.status !==
+            "PENDING"
+          ) {
+            throw new Error(
+              "INVALID_STATUS"
+            );
+          }
+
+          await tx.inventory.updateMany({
+            where: {
+              productId:
+                reservation.productId,
+
+              warehouseId:
+                reservation.warehouseId,
+            },
+
+            data: {
+              reservedUnits: {
+                decrement:
+                  reservation.quantity,
+              },
+            },
+          });
+
+          const updatedReservation =
+            await tx.reservation.update({
+              where: { id },
+
+              data: {
+                status: "RELEASED",
+              },
+            });
+
+          return updatedReservation;
+        }
+      );
+
+    return Response.json(result);
+
+  } catch (error: any) {
+
+    if (
+      error.message ===
+      "NOT_FOUND"
+    ) {
 
       return Response.json(
         {
@@ -32,60 +87,6 @@ export async function POST(
         }
       );
     }
-
-    if (
-      reservation.status !==
-      "PENDING"
-    ) {
-
-      return Response.json(
-        {
-          error:
-            "Reservation already processed",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
-
-    await prisma.$transaction(
-      async (tx) => {
-
-        await tx.inventory.updateMany({
-          where: {
-            productId:
-              reservation.productId,
-
-            warehouseId:
-              reservation.warehouseId,
-          },
-
-          data: {
-            reservedUnits: {
-              decrement:
-                reservation.quantity,
-            },
-          },
-        });
-
-        await tx.reservation.update({
-          where: { id },
-
-          data: {
-            status: "RELEASED",
-          },
-        });
-      }
-    );
-
-    return Response.json({
-      success: true,
-    });
-
-  } catch (error) {
-
-    console.error(error);
 
     return Response.json(
       {

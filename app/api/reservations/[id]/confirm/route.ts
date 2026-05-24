@@ -2,18 +2,17 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: Request,
-  {
-  params,
-}: {
-  params: {
-    id: string;
-  };
-}
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
 ) {
 
   try {
 
-    const { id } = params;
+    const { id } =
+      await context.params;
 
     const result =
       await prisma.$transaction(
@@ -39,6 +38,7 @@ export async function POST(
             );
           }
 
+          // Reservation expired
           if (
             reservation.expiresAt <
             new Date()
@@ -74,6 +74,7 @@ export async function POST(
             );
           }
 
+          // Confirm purchase
           await tx.inventory.updateMany({
             where: {
               productId:
@@ -125,6 +126,22 @@ export async function POST(
         },
         {
           status: 410,
+        }
+      );
+    }
+
+    if (
+      error.message ===
+      "NOT_FOUND"
+    ) {
+
+      return Response.json(
+        {
+          error:
+            "Reservation not found",
+        },
+        {
+          status: 404,
         }
       );
     }

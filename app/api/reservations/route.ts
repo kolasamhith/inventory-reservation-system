@@ -1,45 +1,47 @@
-import { createReservation }
-from "@/lib/reservation";
+import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
+export async function GET(
+  req: Request,
+  context: {
+    params: Promise<{
+      id: string;
+    }>;
+  }
+) {
 
   try {
 
-    const body = await req.json();
+    const { id } =
+      await context.params;
 
     const reservation =
-      await createReservation(
-        body.productId,
-        body.warehouseId,
-        body.quantity
-      );
+      await prisma.reservation.findUnique({
+        where: { id },
+      });
 
-    return Response.json(reservation);
-
-  } catch (error: any) {
-
-    console.error(error);
-
-    if (
-      error.message ===
-      "INSUFFICIENT_STOCK"
-    ) {
+    if (!reservation) {
 
       return Response.json(
         {
           error:
-            "Not enough stock available",
+            "Reservation not found",
         },
         {
-          status: 409,
+          status: 404,
         }
       );
     }
 
     return Response.json(
+      reservation
+    );
+
+  } catch {
+
+    return Response.json(
       {
         error:
-          "Failed to create reservation",
+          "Failed to fetch reservation",
       },
       {
         status: 500,
