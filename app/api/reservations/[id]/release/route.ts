@@ -2,17 +2,18 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   req: Request,
-  context: {
-    params: Promise<{
-      id: string;
-    }>;
-  }
+  {
+  params,
+}: {
+  params: {
+    id: string;
+  };
+}
 ) {
 
   try {
 
-    const { id } =
-      await context.params;
+    const { id } = params;
 
     const reservation =
       await prisma.reservation.findUnique({
