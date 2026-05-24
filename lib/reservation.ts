@@ -1,5 +1,6 @@
 import { prisma } from "@/lib/prisma";
-
+import { releaseExpiredReservations }
+from "@/lib/cleanup";
 const RESERVATION_WINDOW_MINUTES = 10;
 
 export async function createReservation(
@@ -7,7 +8,7 @@ export async function createReservation(
   warehouseId: string,
   quantity: number
 ) {
-
+  await releaseExpiredReservations();
   return prisma.$transaction(async (tx) => {
 
     const inventoryRows =

@@ -1,8 +1,9 @@
 import { prisma } from "@/lib/prisma";
-
+import { releaseExpiredReservations }
+from "@/lib/cleanup";
 export async function GET() {
   try {
-
+    await releaseExpiredReservations();
     const products = await prisma.product.findMany({
       include: {
         inventories: {
