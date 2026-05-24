@@ -8,20 +8,19 @@ This project simulates a real-world multi-warehouse inventory reservation flow w
 
 # Live Demo
 
-Add deployed Vercel URL here:
 
 ```bash
-https://your-vercel-url.vercel.app
+https://inventory-reservation-system-pied.vercel.app/
 ```
 
 ---
 
 # GitHub Repository
 
-Add your GitHub repository link here:
+
 
 ```bash
-https://github.com/your-username/allo-inventory
+https://github.com/kolasamhith/inventory-reservation-system
 ```
 
 ---
